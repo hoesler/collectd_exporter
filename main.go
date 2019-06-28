@@ -202,14 +202,22 @@ func (c collectdCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 
-		for i := range vl.Values {
-			m, err := newMetric(vl, i)
-			if err != nil {
-				log.Errorf("newMetric: %v", err)
-				continue
-			}
+		// prevent duplicate metrics
+		dsNameSeen := make(map[string]bool)
 
-			ch <- m
+		for i := range vl.Values {
+			dsName := vl.DSName(i)
+			if _, ok := dsNameSeen[dsName]; !ok {
+				dsNameSeen[dsName] = true
+
+				m, err := newMetric(vl, i)
+				if err != nil {
+					log.Errorf("newMetric: %v", err)
+					continue
+				}
+
+				ch <- m
+			}
 		}
 	}
 }
