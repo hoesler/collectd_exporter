@@ -1,7 +1,31 @@
-FROM        quay.io/prometheus/busybox:latest
-MAINTAINER  The Prometheus Authors <prometheus-developers@googlegroups.com>
+FROM bitnami/minideb:stretch as builder
+RUN install_packages \
+	build-essential \
+	ca-certificates \
+	curl \
+	git \
+	wget
 
-COPY collectd_exporter /bin/collectd_exporter
+ARG GO_VERSION="1.12.5"
+RUN wget -nv -O - https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
-EXPOSE      9103
-ENTRYPOINT  [ "/bin/collectd_exporter" ]
+RUN mkdir /build
+COPY . /build/
+RUN cd /build &&  make
+
+FROM bitnami/minideb:stretch
+
+RUN install_packages \
+	dumb-init \
+	gosu
+
+RUN useradd -U collectd-exporter
+COPY --from=builder /build/collectd_exporter /usr/local/bin
+COPY docker-entrypoint.sh /usr/local/sbin
+
+EXPOSE 9103
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "docker-entrypoint.sh"]
+CMD ["collectd_exporter"]
