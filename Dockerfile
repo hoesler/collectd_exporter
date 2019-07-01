@@ -23,9 +23,9 @@ RUN install_packages \
 	gosu
 
 RUN useradd -U collectd-exporter
-COPY --from=builder /build/collectd_exporter /usr/local/bin
+COPY --from=builder /build/prometheus-collectd-exporter /usr/local/bin
 COPY docker-entrypoint.sh /usr/local/sbin
 
 EXPOSE 9103
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "docker-entrypoint.sh"]
-CMD ["collectd_exporter"]
+CMD ["prometheus-collectd-exporter"]
